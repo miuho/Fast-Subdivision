@@ -1,0 +1,62 @@
+*****************
+* writeup.txt   *
+* HingOn Miu    *
+* hmiu          *
+*****************
+
+-   Fast subdivision
+        Without the help of adaptive subdivision, 6th subdivision of
+        stegosaurus is able to complete around 2 seconds. Tested on various
+        machines in 5201 and 5205, it generally completes from 1.8 to 2.4
+        seconds.
+
+Implementation decisions:
+1.) In order to maximize the speed of the subdivision, I have 2 data structures
+    to store information of the edges of the triangles. First of all, I have
+    std::vector to store all the MeshEdge elements. I choose to use std::vector
+    because it uses continuous storage. Thus, traversing all the distinct edges
+    to generate odd vertices would be fast. Then, I have std::map to use a pair
+    of endpoints vertex index as key and maps to the edge index of the edges
+    vector. I choose to use std::map because its hashtable implementation
+    allows me to identify whether identical edge was inserted already in O(1)
+    time, instead of checking each edges in edges std::vector in O(n) time.
+    Also, the reason I did not choose to generate odd vertices by traversing
+    the hashtable is that std::map does not use continuous storage like
+    std::vector does. Therefore, the combination of std::vector and std::map
+    allows me to quickly identify those edges shared by 2 triangles as well as
+    to traverse the edges quickly to generate odd vertices later.
+    
+2.) Since two vertices (endpoints of an edge) uniquely identify an edge, I
+    found a NxN -> N mapping function online to map the two vertices index
+    to a edge index for the key of the hashtable. Also, to avoid double
+    counting the same edge, I always place the smaller vertex index first and
+    larger vertex index second for the mapping function so that both endpoints
+    <v0 v1> and <v1 v0> maps to the same edge index, regardless the order of
+    the endpoints are presented. I originally attempted to use a unqiue string
+    to map the 2 vertices index like "23 43" to an edge index, but I later
+    found that those string operations are much slower.
+    
+3.) Once 3 odd vertices of a triangle are generated, I then can split the
+    triangle <v0, v1, v3> in the follow way:
+            v0
+           / \
+         o0---o2
+         / \ / \
+       v1---o1--v2  
+    Thus, the 4 new triangles are <v0 o0 o2>, <o0 o1 o2>, <o0 v1 o1> and
+    <o2 o1 v2>. Notice that the new vertices are all counter-clockwise ordered.
+    
+4.) In order to preserve the counter-clockwise order of each triangle, I have 3
+    new macros V0_V1, V1_V2, and V2_V0 to identify the position of an edge in
+    the triangle, which have values 0, 1, and 2. They corresponds to the index
+    of the odd vertices array in each triangle. Thus, for example, I look up an
+    edge, and I see it has orientation V0_V1, and so I know this edge generates
+    an odd vertex whose vertex index is placed at 0th position in the
+    triangle's odd vertices index array. Therefore, I can maintain the counter-
+    clockwise order of the odd vertices in each triangle. 
+
+5.) To calculate the neighbors' coordinates sum, I use std::set to keep record
+    of the neighbors for each vertex, so that I would not double count the
+    same neighbor twice in the sum.
+    
+    
